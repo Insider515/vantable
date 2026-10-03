@@ -203,11 +203,14 @@ test('the published files include the documentation the npm page needs', () => {
 test('both READMEs show the screenshot, and the file is in the repository', () => {
   assert.ok(existsSync(path.join(ROOT, 'docs/screenshot.png')), 'docs/screenshot.png is missing');
   for (const [name, md] of [['README.md', EN], ['README.uk.md', UK]]) {
-    const img = md.match(/!\[([^\]]*)\]\(([^)]+screenshot\.png)\)/);
+    // Shown as <img> with an explicit width: markdown would stretch a 640px
+    // capture across the full column and blur it.
+    const img = md.match(/<img src="([^"]+screenshot\.png)" alt="([^"]*)" width="(\d+)">/);
     assert.ok(img, `${name} does not show the screenshot`);
-    assert.ok(img[1].length > 40, `${name}: the alt text must describe the picture for screen readers`);
-    assert.match(img[2], /^https:\/\/raw\.githubusercontent\.com\//,
+    assert.match(img[1], /^https:\/\/raw\.githubusercontent\.com\//,
       `${name}: use an absolute URL so the image also shows on the npm page`);
+    assert.ok(img[2].length > 40, `${name}: the alt text must describe the picture for screen readers`);
+    assert.ok(Number(img[3]) > 0, `${name}: give the image its native width`);
   }
 });
 
