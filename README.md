@@ -16,7 +16,7 @@ components into one configurable component:
 - **accordion** master/detail expandable rows
 - **CSV export** and **print** (dependency-free)
 
-<img src="https://raw.githubusercontent.com/Insider515/vantable/master/docs/screenshot.png" alt="The demo page in dark mode: a table with thirteen column types — avatars, links, copy buttons, status badges, inline selects, traffic bars and download buttons — a toolbar with the search box, the Columns menu and the export buttons, an open row-action dropdown with six entries, and the pager at the bottom" width="640">
+<img src="https://raw.githubusercontent.com/Insider515/vantable/master/docs/screenshot.png" alt="The demo in dark mode: a table with thirteen column types — avatars, links, copy buttons, inline selects, status badges, traffic bars, download buttons and a row-action dropdown — above it the search box with the Columns menu and the export buttons, below it the pager" width="1254">
 
 ## Install
 
