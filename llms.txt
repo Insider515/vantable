@@ -1,0 +1,131 @@
+# vantable
+
+> Zero-dependency vanilla-JS data table for dashboards. One UMD file (works as a
+> `<script>` global, an ESM import or a CommonJS require), no jQuery, no
+> Bootstrap, no XLSX library. The default stylesheet is injected from the script
+> itself, so a table is styled with nothing else included.
+
+Version: 0.1.0 · License: MIT · Runtime dependencies: none.
+
+## Install
+
+    npm i vantable
+    import Vantable from 'vantable'            // ESM
+    const Vantable = require('vantable')       // CJS
+    <script src="https://unpkg.com/vantable/dist/vantable.umd.js"></script>
+
+Entry points: `main`/`require` → `src/vantable.js`, `module`/`import` →
+`src/vantable.mjs`, `browser`/`unpkg`/`jsdelivr` → `dist/vantable.umd.js`,
+`types` → `src/vantable.d.ts`, `vantable/css` → `src/vantable.css` (only needed
+with `styles: false`).
+
+## Quick start
+
+    const table = new Vantable('#host', {
+      columns: [
+        { key: 'id',     label: 'ID',     type: 'number', width: '60px' },
+        { key: 'name',   label: 'Name',   editable: true },
+        { key: 'email',  label: 'Email',  type: 'copy' },
+        { key: 'status', label: 'Status', type: 'status',
+          map: { 1: { label: 'On', color: '#22a06b' }, 2: { label: 'Off', color: '#e35d4b' } } },
+        { label: 'Actions', type: 'actions', edit: { enabled: true }, remove: { enabled: true } }
+      ],
+      data: rows,
+      search: 'live',
+      pagination: { perPage: 25 },
+      onSave: (id, changes) => save(id, changes)
+    });
+
+## Options (constructor, second argument)
+
+- columns (required): array of column definitions, `'key'` strings or
+  `[key, label]` tuples.
+- data: client-side rows. rowId: the id field (default `'id'`).
+- search / sort: `'live'|'client'|'local'` (in the browser), `'server'|'db'|
+  'remote'` (through `server.fetch`), `false`. Default follows the source.
+- searchFields: which keys the global search looks at (default: all data columns).
+- defaultSort, defaultDir: the starting order.
+- pagination: `false` or `{ perPage, options }` (default 50 / 50-100-250-500).
+- server: `{ fetch({ page, perPage, q, fields, sort, dir, filters }) -> { rows, total } }`.
+- editable + onSave(id, changes, row): inline row editing.
+- actions: `{ edit, remove, custom, menu }` when not using an `actions` column.
+- accordion: `{ render(row) }` or `{ columns: [...] }` — master/detail rows.
+- export: `true` or `{ formats, filename, adapters: { csv, xlsx, pdf } }`.
+- printable, exportName, emptyText, label, labelledby, labels (i18n).
+- styles: true (built-in CSS, default) | false (none) | '<css text>' (yours
+  instead) | { css, href, extend } — `extend: true` keeps the built-in sheet
+  under yours. The same CSS is injected once per page.
+- filters: `true | 'client' | 'server' | false` — mode of the per-column filters
+  (columns opt in with their own `filter`).
+- selection: `true` or `{ mode:'multi'|'single', header, selectable(row), actions }`.
+- states: `true` or `{ loading, skeleton, error, retry }` — async states, on by default.
+- virtual: `true` or `{ rowHeight, overscan }` — render only the rows in view.
+- responsive: `true` or `{ breakpoint }` — stack rows into cards when narrow.
+- resize, reorder, columnPicker, stickyHeader, maxHeight, minColWidth — column ops.
+- keyboard (default true), styles (default true), theme, mode: 'dark'|'light'.
+
+## Column definition
+
+Common: key (dotted paths work), label, type, sortable, searchable, editable,
+align, width, className, cellClass, prefix, suffix, filter, pin ('left'|'right'),
+hidden, resizable, reorderable.
+
+Types and their own props:
+- text / number — plain value
+- link — href (string or row => url), target, text
+- external — opens in a new tab, always rel="noopener"
+- copy — value plus a copy-to-clipboard button
+- status — map: { value: { label, color } } → coloured badge
+- select / tag — options: [{ value, label }], onChange(row, value)
+- image — src (string or row => url)
+- download — filename, text; saves the cell value as a file
+- html — render(value, row) → raw markup (the ONLY unescaped path)
+- actions — edit, remove, custom[], menu (dropdown by default)
+
+Everything except `html` (and an accordion `render()`) is HTML-escaped.
+
+## Methods
+
+setData(rows), refresh(), exportCsv(name), print(), scrollToRow(i), destroy(),
+on(event, cb), setLoading(on), setError(err|null),
+toggleColumn/hideColumn/showColumn(key), moveColumn(key, index),
+setColumnWidth(key, w), pinColumn(key, 'left'|'right'|false), columnOrder(),
+columnState(), setColumnState(snapshot),
+setFilter(key, value), getFilter(key), filters(), activeFilters(), clearFilters(),
+selectRow(id, on), selectAll(), clearSelection(), selectedIds(), selectedRows(),
+selectedCount(), isSelected(id), isStacked().
+
+Statics: Vantable.version, Vantable.css, Vantable.injectStyles(),
+Vantable.serverExport(url, opts), Vantable.sheetJsExport(opts),
+Vantable.jsPdfExport(opts).
+
+## Events (table.on(name, cb))
+
+render, save, remove, edit, action, cellChange, expand, copy, export, error,
+destroy, columnResize, columnMove, columnPin, columnVisibility, virtualRange,
+loading, selectionChange, bulkAction, filterChange, responsive.
+
+## Things worth knowing
+
+- Zero runtime dependencies. XLSX/PDF need an adapter you choose; SheetJS and
+  jsPDF are never bundled, and `tools/vtexport` is a separate Go CLI.
+- The CSS lives in two places that must stay in sync: `src/vantable.css` and the
+  `DEFAULT_CSS` string inside the library. `dist/vantable.umd.js` is a byte copy
+  of `src/vantable.js` (`npm run build`).
+- Virtualization needs a bounded scroll box (`maxHeight`); it is ignored with an
+  accordion and pauses in the responsive card mode, because both break the
+  uniform row height it relies on.
+- A failed `server.fetch` shows an error row; `states: { error: false }` brings
+  back the plain empty row. A synchronous throw from `server.fetch` is NOT
+  caught — reject instead.
+- Selection is keyed by row id and survives search, sort, paging and refreshes;
+  `selectedRows()` can only resolve the rows currently loaded.
+- Exports cover the filtered/sorted view (the fetched page in server mode), not
+  the rows hidden by column visibility.
+- All user-facing text comes from `labels`; override any subset to translate.
+
+## Repository layout
+
+src/vantable.js (the library), src/vantable.css, src/vantable.d.ts,
+src/vantable.mjs, dist/vantable.umd.js, examples/index.html (9 live demos),
+test/*.test.mjs (Node test runner + jsdom), tools/vtexport (Go export CLI).

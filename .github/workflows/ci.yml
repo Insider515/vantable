@@ -1,0 +1,45 @@
+# CI for the vantable package: syntax + types + DOM/export tests for the
+# library, build + unit tests for the Go export binary.
+# NOTE: while vantable lives inside the GeekProxy repo this file is inert —
+# GitHub only runs workflows from the repository root. It becomes active once
+# the package is published as its own repo.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: dist is in sync with src
+        run: cmp src/vantable.js dist/vantable.umd.js
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: build the export binary (needed by the end-to-end test)
+        run: npm run build:go
+      - run: npm run test:coverage
+
+  binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: go vet / test / build
+        working-directory: tools/vtexport
+        run: |
+          gofmt -l . | tee /dev/stderr | (! read)
+          go vet ./...
+          go test -cover ./...
+          GOOS=linux GOARCH=amd64 go build -o vtexport .

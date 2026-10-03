@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vantable — demo</title>
+  <!-- No vantable CSS link on purpose: the default styles auto-inject from JS. -->
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; padding: 24px; background: #fbfbfd; color: #1f2430; }
+    h1 { font-size: 20px; } h2 { font-size: 15px; margin-top: 28px; }
+    .demo { max-width: 1000px; margin: 0 auto; }
+    .hint { font-size: 13px; opacity: .8; }
+    @media (prefers-color-scheme: dark) { body { background: #10141c; color: #e6e9f0; } }
+  </style>
+</head>
+<body>
+  <div class="demo">
+    <h1>Vantable demo</h1>
+    <p>Zero dependencies. Two independent instances below.</p>
+
+    <h2>1. Full-featured (client-side) — all 13 column types</h2>
+    <p class="hint">
+      text, number, link, external, copy, status, select (with a change
+      callback), image (local files from <code>examples/avatars/</code>),
+      textarea, download, html and actions — plus the
+      <b>Columns</b> menu to hide any of them. Scroll the table sideways.
+      The <b>Actions</b> column is a dropdown (☰ ▾) with five entries; the
+      inline layout it replaced is still available as <code>menu: false</code>
+      and is shown in demo 7.
+    </p>
+    <div id="t1"></div>
+
+    <h2>2. Lightweight read-only + accordion (and the <code>tag</code> column)</h2>
+    <div id="t2"></div>
+
+    <h2>3. Export: CSV (built in) + XLSX / PDF through adapters</h2>
+    <p class="hint">
+      CSV needs nothing. XLSX/PDF go to an adapter: the Go binary behind
+      <code>/service/export</code> by default, or SheetJS / jsPDF when those
+      libraries are loaded on the page. Without any adapter the button reports
+      an <code>error</code> event and falls back to CSV.
+    </p>
+    <div id="t3"></div>
+    <p id="exp-log" class="hint">export status: —</p>
+
+    <h2>4. Column operations</h2>
+    <p class="hint">
+      Drag a header edge to resize, drag a header body onto another to reorder,
+      use the <b>Columns</b> menu to show/hide. “ID” is pinned left and “Actions”
+      pinned right (scroll sideways to see them stay); the header sticks while
+      the body scrolls. The buttons below drive the same operations from code.
+    </p>
+    <p class="hint">
+      <button type="button" id="op-pin">pin/unpin Country</button>
+      <button type="button" id="op-hide">hide/show Token</button>
+      <button type="button" id="op-wide">widen Email</button>
+      <button type="button" id="op-save">save layout</button>
+      <button type="button" id="op-load">restore layout</button>
+      <span id="op-log"></span>
+    </p>
+    <div id="t4"></div>
+
+    <h2>5. Virtualization — 50 000 rows</h2>
+    <p class="hint">
+      Only the rows in view are in the DOM; two spacer rows keep the scrollbar
+      the size of the whole set. Scroll the box, then check the row count below —
+      it stays small. Search and sort still run over all 50 000 rows.
+    </p>
+    <p class="hint">
+      <button type="button" id="v-jump">jump to row 42 000</button>
+      <span id="v-log"></span>
+    </p>
+    <div id="t5"></div>
+
+    <h2>6. Async states: loading / skeleton / error</h2>
+    <p class="hint">
+      A server-backed table with a deliberately slow source. The first load shows
+      skeleton rows, a reload dims the rows under the overlay, and a failure shows
+      the error row with a Retry button.
+    </p>
+    <p class="hint">
+      <button type="button" id="s-load">reload (1.2s)</button>
+      <button type="button" id="s-fail">make the next load fail</button>
+      <button type="button" id="s-manual">setLoading(true) for 1.5s</button>
+      <span id="s-log"></span>
+    </p>
+    <div id="t6"></div>
+
+    <h2>7. Row selection + bulk actions</h2>
+    <p class="hint">
+      Tick rows (or the header checkbox for the whole page) and the bulk bar
+      appears above the table. Disabled rows are the ones with status
+      “Disabled” — <code>selectable</code> refuses them. The selection is kept by
+      row id, so it survives search, sort and paging.
+    </p>
+    <p class="hint">
+      <button type="button" id="sel-all">selectAll()</button>
+      <button type="button" id="sel-clear">clearSelection()</button>
+      <span id="sel-log">nothing selected</span>
+    </p>
+    <div id="t7"></div>
+
+    <h2>8. Per-column filters</h2>
+    <p class="hint">
+      A filter row under the header: a number range on ID, text on user and
+      email, a dropdown on country and status (its options come from the
+      column's <code>map</code>). Filters, the search box and sorting are an AND.
+    </p>
+    <p class="hint">
+      <button type="button" id="f-set">setFilter('country', 'DE')</button>
+      <button type="button" id="f-clear">clearFilters()</button>
+      <span id="f-log"></span>
+    </p>
+    <div id="t8"></div>
+
+    <h2>9. Responsive — cards on a narrow table</h2>
+    <p class="hint">
+      This table watches its own width: below 640px every row becomes a card with
+      the column label in front of each value. Narrow the window (or press the
+      button to squeeze the container) to see it switch.
+    </p>
+    <p class="hint">
+      <button type="button" id="r-narrow">squeeze to 420px</button>
+      <button type="button" id="r-wide">back to full width</button>
+      <span id="r-log"></span>
+    </p>
+    <div id="r-box"><div id="t9"></div></div>
+  </div>
+
+  <script src="../src/vantable.js"></script>
+  <script>
+    var users = [];
+    var countries = ['DE', 'US', 'RU', 'NL', 'FR', 'GB'];
+    var tiers = ['free', 'pro', 'vip'];
+    for (var i = 1; i <= 43; i++) {
+      users.push({
+        id: i,
+        username: 'user' + i,
+        email: 'user' + i + '@mail.tld',
+        token: 'tok_' + Math.random().toString(36).slice(2, 10),
+        country: countries[i % countries.length],
+        status: (i % 3 === 0) ? 2 : 1,
+        note: 'note ' + i,
+        tier: tiers[i % tiers.length],
+        traffic: (i * 37) % 101,                       // percent, for the html column
+        config: 'host=proxy' + i + '.geekproxy.io\nport=' + (3128 + i) + '\nuser=user' + i
+      });
+    }
+
+    /**
+     * The avatar of a row: a local file from examples/avatars/, cycled so that
+     * any number of rows is covered. Local, so the demo still loads nothing
+     * from the network.
+     */
+    var AVATAR_COUNT = 37;
+    function avatar(row) {
+      return 'avatars/avatar' + ((row.id - 1) % AVATAR_COUNT) + '.webp';
+    }
+
+    /** A traffic bar for the html column (raw markup, rendered as given). */
+    function trafficBar(value) {
+      var pct = Math.max(0, Math.min(100, Number(value) || 0));
+      var color = pct > 80 ? '#e35d4b' : pct > 50 ? '#d97706' : '#22a06b';
+      return '<span style="display:inline-flex;align-items:center;gap:6px">' +
+        '<span style="display:block;width:70px;height:6px;border-radius:99px;background:#d8dce6;overflow:hidden">' +
+        '<span style="display:block;width:' + pct + '%;height:100%;background:' + color + '"></span></span>' +
+        '<span style="color:#64748b;font-size:12px">' + pct + '%</span></span>';
+    }
+
+    // 1) Full-featured table — every column type, a custom theme and the
+    //    column menu (scroll sideways: 13 columns do not fit a laptop screen).
+    var t1 = new Vantable('#t1', {
+      rowId: 'id',
+      exportName: 'users',
+      editable: true,
+      columnPicker: true,                              // "Columns" menu in the toolbar
+      theme: { accent: '#7c3aed', radius: '10px' },   // custom look; omit for defaults
+      search: 'live',                                  // live filter of loaded rows
+      searchFields: ['username', 'email', 'country'],  // search only these (omit = all)
+      sort: 'client',
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: '60px' },
+        // type: image — src may be a function of the row (here a data-URI SVG)
+        { key: 'avatar', label: '', type: 'image', src: avatar, width: '64px', sortable: false },
+        { key: 'username', label: 'User', type: 'link', href: function (r) { return '/users/' + r.id; }, target: '_blank', editable: true },
+        { key: 'email', label: 'Email', type: 'copy' },
+        { key: 'token', label: 'Token', type: 'copy' },
+        // type: external — opens in a new tab with an ↗ marker (never fetched)
+        {
+          key: 'username', label: 'Panel', type: 'external', sortable: false,
+          href: function (r) { return 'https://example.com/panel/' + r.id; }, text: 'open ↗'
+        },
+        { key: 'country', label: 'Country', type: 'text' },
+        // type: select — a dropdown inside the cell, with a change callback
+        {
+          key: 'tier', label: 'Tier', type: 'select', width: '110px',
+          options: [{ value: 'free', label: 'Free' }, { value: 'pro', label: 'Pro' }, { value: 'vip', label: 'VIP' }],
+          onChange: function (row, value) {
+            row.tier = value;
+            console.log('tier of', row.username, '->', value);
+          }
+        },
+        { key: 'status', label: 'Status', type: 'status', map: { 1: { label: 'Enabled', color: '#22a06b' }, 2: { label: 'Disabled', color: '#e35d4b' } } },
+        // type: html — raw markup from render(value, row)
+        { key: 'traffic', label: 'Traffic', type: 'html', width: '150px', render: function (v) { return trafficBar(v); } },
+        // type: download — saves the cell value as a file
+        {
+          key: 'config', label: 'Config', type: 'download', sortable: false,
+          filename: function (r) { return 'user-' + r.id + '.conf'; }, text: 'Config'
+        },
+        { key: 'note', label: 'Note', type: 'textarea', editable: true },
+        {
+          // Actions live in a dropdown by default — five of them would never
+          // fit as buttons in this column.
+          label: 'Actions', type: 'actions', width: '90px',
+          edit: { enabled: true },
+          custom: [
+            { label: 'Ping', onClick: function (r) { alert('Ping ' + r.username); } },
+            { label: 'Restart', onClick: function (r) { console.log('restart', r.id); } },
+            { label: 'Reset password', onClick: function (r) { console.log('reset', r.id); } },
+            { label: 'Open logs', onClick: function (r) { console.log('logs', r.id); } }
+          ],
+          remove: { enabled: true, onRemove: function (r) { console.log('removed', r.id); } }
+        }
+      ],
+      data: users,
+      pagination: { perPage: 10, options: [10, 25, 50] },
+      onSave: function (id, changes, row) { console.log('save', id, changes); }
+    });
+    t1.on('cellChange', function (e) { console.log('cellChange', e.column, '=', e.value); });
+
+    // 2) Lightweight read-only + expandable detail
+    new Vantable('#t2', {
+      rowId: 'id',
+      searchOn: true,
+      editable: false,
+      accordion: {
+        columns: [
+          ['email', 'Email'],
+          ['token', 'Token'],
+          ['note', 'Note']
+        ]
+      },
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: '60px' },
+        { key: 'username', label: 'User', type: 'text' },
+        // type: tag — the same control as `select`, under its other name
+        {
+          key: 'country', label: 'Country', type: 'tag', width: '120px',
+          options: countries,
+          onChange: function (row, value) { row.country = value; console.log('country', row.id, '->', value); }
+        },
+        { key: 'status', label: 'Status', type: 'status', map: { 1: { label: 'Enabled', color: '#22a06b' }, 2: { label: 'Disabled', color: '#e35d4b' } } }
+      ],
+      data: users,
+      pagination: { perPage: 8, options: [8, 16] }
+    });
+
+    // 3) Export demo. CSV is built in; XLSX/PDF need an adapter. Three ready-made
+    //    ones ship with the package:
+    //      Vantable.serverExport('/service/export')         -> POST to your app,
+    //            which pipes the payload through tools/vtexport (the Go binary)
+    //      Vantable.sheetJsExport({ lib: XLSX })             -> SheetJS, in-browser
+    //      Vantable.jsPdfExport({ lib: jspdf.jsPDF })        -> jsPDF, in-browser
+    //    The client-side ones are picked here when those libraries happen to be
+    //    loaded on the page; otherwise the endpoint adapter is used.
+    var adapters = {};
+    adapters.xlsx = window.XLSX
+      ? Vantable.sheetJsExport({ lib: window.XLSX, sheetName: 'Users' })
+      : Vantable.serverExport('/service/export');
+    adapters.pdf = (window.jspdf && window.jspdf.jsPDF)
+      ? Vantable.jsPdfExport({ lib: window.jspdf.jsPDF })
+      : Vantable.serverExport('/service/export');
+
+    var t3 = new Vantable('#t3', {
+      rowId: 'id',
+      search: 'live',
+      sort: 'client',
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: '60px' },
+        { key: 'username', label: 'User', type: 'text' },
+        { key: 'email', label: 'Email', type: 'text' },
+        { key: 'country', label: 'Country', type: 'text' },
+        { key: 'note', label: 'Note', type: 'text' }
+      ],
+      data: users,
+      pagination: { perPage: 5, options: [5, 10] },
+      export: { formats: ['csv', 'xlsx', 'pdf'], filename: 'users', adapters: adapters }
+    });
+
+    var expLog = document.getElementById('exp-log');
+    t3.on('export', function (e) { expLog.textContent = 'export status: done (' + e.format + ')'; });
+    t3.on('error', function (e) { expLog.textContent = 'export status: ' + ((e && e.message) || e); });
+
+    // 4) Column operations: resize, reorder, pin, show/hide, sticky header.
+    var t4 = new Vantable('#t4', {
+      rowId: 'id',
+      search: 'live',
+      sort: 'client',
+      resize: true,              // drag a header edge
+      reorder: true,             // drag a header onto another one
+      columnPicker: true,        // toolbar menu with the column checkboxes
+      stickyHeader: true,        // header stays while the body scrolls…
+      maxHeight: '320px',        // …which needs a bounded scroll box
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: 70, pin: 'left', resizable: false },
+        { key: 'username', label: 'User', width: 160 },
+        { key: 'email', label: 'Email', width: 240 },
+        { key: 'token', label: 'Token', type: 'copy', width: 200 },
+        { key: 'country', label: 'Country', width: 140 },
+        { key: 'note', label: 'Note', width: 320 },
+        {
+          label: 'Actions', type: 'actions', pin: 'right', reorderable: false,
+          custom: [{ label: 'Ping', onClick: function (r) { alert('Ping ' + r.username); } }]
+        }
+      ],
+      data: users,
+      pagination: { perPage: 25, options: [25, 50] }
+    });
+
+    var opLog = document.getElementById('op-log');
+    /** Show what the table reported after a column operation. */
+    function logOp(name, e) { opLog.textContent = ' ' + name + ': ' + JSON.stringify(e); }
+    t4.on('columnResize', function (e) { logOp('resize', e); });
+    t4.on('columnMove', function (e) { logOp('move', e); });
+    t4.on('columnPin', function (e) { logOp('pin', e); });
+    t4.on('columnVisibility', function (e) { logOp('visibility', e); });
+
+    var savedLayout = null;
+    document.getElementById('op-pin').onclick = function () {
+      t4.pinColumn('country', t4._colById('country').pin ? false : 'left');
+    };
+    document.getElementById('op-hide').onclick = function () { t4.toggleColumn('token'); };
+    document.getElementById('op-wide').onclick = function () { t4.setColumnWidth('email', 420); };
+    document.getElementById('op-save').onclick = function () {
+      savedLayout = t4.columnState();
+      opLog.textContent = ' layout saved (' + savedLayout.length + ' columns)';
+    };
+    document.getElementById('op-load').onclick = function () {
+      if (savedLayout) { t4.setColumnState(savedLayout); opLog.textContent = ' layout restored'; }
+    };
+
+    // 5) Virtualization over a large client-side dataset.
+    var big = [];
+    for (var k = 1; k <= 50000; k++) {
+      big.push({
+        id: k,
+        username: 'user' + k,
+        email: 'user' + k + '@mail.tld',
+        country: countries[k % countries.length],
+        status: (k % 3 === 0) ? 2 : 1
+      });
+    }
+
+    var t5 = new Vantable('#t5', {
+      rowId: 'id',
+      search: 'live',
+      sort: 'client',
+      pagination: false,          // the point of virtualization: no pager needed
+      virtual: { rowHeight: 37, overscan: 10 },
+      stickyHeader: true,
+      maxHeight: '420px',         // the scroll box the window is measured against
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: 90 },
+        { key: 'username', label: 'User', width: 180 },
+        { key: 'email', label: 'Email', width: 260 },
+        { key: 'country', label: 'Country', width: 120 },
+        { key: 'status', label: 'Status', type: 'status', map: { 1: { label: 'Enabled', color: '#22a06b' }, 2: { label: 'Disabled', color: '#e35d4b' } } }
+      ],
+      data: big
+    });
+
+    var vLog = document.getElementById('v-log');
+    /** Report the rendered window against the dataset size. */
+    function showRange(e) {
+      vLog.textContent = ' rows ' + e.start + '–' + e.end + ' of ' + e.total +
+        ' (' + document.querySelectorAll('#t5 tbody tr.vt-tr').length + ' in the DOM)';
+    }
+    t5.on('virtualRange', showRange);
+    t5.on('render', function () {
+      vLog.textContent = ' ' + document.querySelectorAll('#t5 tbody tr.vt-tr').length +
+        ' rows in the DOM out of ' + t5.state.total;
+    });
+    document.getElementById('v-jump').onclick = function () { t5.scrollToRow(42000); };
+
+    // 6) Async states over a slow (and optionally failing) server source.
+    var failNext = false;
+
+    /** A deliberately slow page of data, or a failure when armed. */
+    function slowFetch(req) {
+      return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+          if (failNext) { failNext = false; reject(new Error('HTTP 503 from /api/users')); return; }
+          var start = (req.page - 1) * req.perPage;
+          resolve({ rows: users.slice(start, start + req.perPage), total: users.length });
+        }, 1200);
+      });
+    }
+
+    var t6 = new Vantable('#t6', {
+      rowId: 'id',
+      search: 'server',
+      sort: 'server',
+      states: { loading: true, skeleton: 6, error: true, retry: true },
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: 80 },
+        { key: 'username', label: 'User' },
+        { key: 'email', label: 'Email' },
+        { key: 'country', label: 'Country' }
+      ],
+      pagination: { perPage: 10, options: [10, 25] },
+      server: { fetch: slowFetch }
+    });
+
+    var sLog = document.getElementById('s-log');
+    t6.on('loading', function (e) { sLog.textContent = e.loading ? ' loading…' : ' loaded'; });
+    t6.on('error', function (e) { sLog.textContent = ' error: ' + e.message; });
+    document.getElementById('s-load').onclick = function () { t6.refresh(); };
+    document.getElementById('s-fail').onclick = function () {
+      failNext = true;
+      sLog.textContent = ' the next load will fail — press reload';
+    };
+    document.getElementById('s-manual').onclick = function () {
+      t6.setLoading(true);
+      setTimeout(function () { t6.setLoading(false); }, 1500);
+    };
+
+    // 7) Row selection with checkboxes and bulk actions.
+    var selUsers = users.map(function (u) { return Object.assign({}, u); });
+
+    var t7 = new Vantable('#t7', {
+      rowId: 'id',
+      search: 'live',
+      sort: 'client',
+      selection: {
+        mode: 'multi',
+        selectable: function (row) { return row.status === 1; },   // only enabled users
+        actions: [
+          {
+            label: 'Disable', onClick: function (rows) {
+              rows.forEach(function (r) { r.status = 2; });
+              t7.clearSelection();
+              t7.refresh();
+            }
+          },
+          {
+            label: 'Delete', className: 'vt-danger', onClick: function (rows, ids) {
+              selUsers = selUsers.filter(function (r) { return ids.indexOf(String(r.id)) === -1; });
+              t7.clearSelection();
+              t7.setData(selUsers);
+            }
+          },
+          { label: 'Copy ids', onClick: function (rows, ids) { alert(ids.join(', ')); } }
+        ]
+      },
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: 80 },
+        { key: 'username', label: 'User' },
+        { key: 'email', label: 'Email' },
+        { key: 'status', label: 'Status', type: 'status', map: { 1: { label: 'Enabled', color: '#22a06b' }, 2: { label: 'Disabled', color: '#e35d4b' } } },
+        // menu: false — the old layout, for comparison with the dropdown above
+        {
+          label: 'Actions', type: 'actions', menu: false,
+          edit: { enabled: true }, remove: { enabled: true }
+        }
+      ],
+      data: selUsers,
+      pagination: { perPage: 10, options: [10, 25] }
+    });
+
+    var selLog = document.getElementById('sel-log');
+    t7.on('selectionChange', function (e) {
+      selLog.textContent = e.count ? e.count + ' selected: ' + e.ids.join(', ') : 'nothing selected';
+    });
+    t7.on('bulkAction', function (e) { console.log('bulk', e.label, e.ids); });
+    document.getElementById('sel-all').onclick = function () { t7.selectAll(); };
+    document.getElementById('sel-clear').onclick = function () { t7.clearSelection(); };
+
+    // 8) Per-column filters over client-side data.
+    var statusMap = { 1: { label: 'Enabled', color: '#22a06b' }, 2: { label: 'Disabled', color: '#e35d4b' } };
+
+    var t8 = new Vantable('#t8', {
+      rowId: 'id',
+      search: 'live',
+      sort: 'client',
+      stickyHeader: true,
+      maxHeight: '360px',
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: 120, filter: 'number' },
+        { key: 'username', label: 'User', filter: true },
+        { key: 'email', label: 'Email', filter: { type: 'text', placeholder: 'search email' } },
+        { key: 'country', label: 'Country', width: 140, filter: { type: 'select', options: countries } },
+        { key: 'status', label: 'Status', type: 'status', map: statusMap, width: 150, filter: 'select' }
+      ],
+      data: users,
+      pagination: { perPage: 10, options: [10, 25] }
+    });
+
+    var fLog = document.getElementById('f-log');
+    t8.on('filterChange', function (e) {
+      var active = Object.keys(e.filters);
+      fLog.textContent = active.length
+        ? ' active: ' + JSON.stringify(e.filters) + ' → ' + t8.state.total + ' rows'
+        : ' no filters → ' + t8.state.total + ' rows';
+    });
+    document.getElementById('f-set').onclick = function () { t8.setFilter('country', 'DE'); };
+    document.getElementById('f-clear').onclick = function () { t8.clearFilters(); };
+
+    // 9) Responsive card mode.
+    var t9 = new Vantable('#t9', {
+      rowId: 'id',
+      search: 'live',
+      sort: 'client',
+      responsive: { breakpoint: 640 },
+      columns: [
+        { key: 'id', label: 'ID', type: 'number', width: 90 },
+        { key: 'username', label: 'User' },
+        { key: 'email', label: 'Email', type: 'copy' },
+        { key: 'country', label: 'Country' },
+        { key: 'note', label: 'Note' }
+      ],
+      data: users,
+      pagination: { perPage: 5, options: [5, 10] }
+    });
+
+    var rLog = document.getElementById('r-log');
+    var rBox = document.getElementById('r-box');
+    t9.on('responsive', function (e) {
+      rLog.textContent = ' ' + (e.stacked ? 'cards' : 'table') + ' (width ' + e.width + 'px)';
+    });
+    document.getElementById('r-narrow').onclick = function () {
+      rBox.style.maxWidth = '420px';
+      window.dispatchEvent(new Event('resize'));
+    };
+    document.getElementById('r-wide').onclick = function () {
+      rBox.style.maxWidth = '';
+      window.dispatchEvent(new Event('resize'));
+    };
+  </script>
+</body>
+</html>

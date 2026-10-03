@@ -1,0 +1,98 @@
+{
+  "name": "vantable",
+  "version": "0.1.0",
+  "description": "Zero-dependency vanilla-JS data table for dashboards: client & server pagination, sorting, search, rich column types (links, copy, status, tags, images), inline & modal editing, row actions, accordion master/detail rows, CSV export (XLSX/PDF via adapters) and print. Multi-instance, no jQuery/Bootstrap.",
+  "main": "src/vantable.js",
+  "module": "src/vantable.mjs",
+  "types": "src/vantable.d.ts",
+  "browser": "dist/vantable.umd.js",
+  "unpkg": "dist/vantable.umd.js",
+  "jsdelivr": "dist/vantable.umd.js",
+  "style": "src/vantable.css",
+  "exports": {
+    ".": {
+      "types": "./src/vantable.d.ts",
+      "import": "./src/vantable.mjs",
+      "require": "./src/vantable.js",
+      "default": "./src/vantable.js"
+    },
+    "./css": "./src/vantable.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "dist",
+    "tools",
+    "llms.txt",
+    "CHANGELOG.md",
+    "README.md",
+    "README.uk.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "cp src/vantable.js dist/vantable.umd.js",
+    "lint": "node --check src/vantable.js",
+    "typecheck": "tsc --ignoreConfig --noEmit --strict --target ES2018 --lib ES2018,DOM examples/type-usage.ts",
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"dist/**\" --test-coverage-exclude=\"test/**\" \"test/*.test.mjs\"",
+    "test:go": "cd tools/vtexport && go test ./...",
+    "test:go:coverage": "cd tools/vtexport && go test -cover ./...",
+    "build:go": "cd tools/vtexport && go build -o vtexport .",
+    "check": "npm run lint && npm run typecheck && npm run build:go && npm run test:go && npm test",
+    "prepublishOnly": "npm run build && npm run check"
+  },
+  "keywords": [
+    "table",
+    "grid",
+    "datatable",
+    "data-table",
+    "vanilla",
+    "vanilla-js",
+    "zero-dependency",
+    "no-dependencies",
+    "dashboard",
+    "pagination",
+    "sorting",
+    "search",
+    "filter",
+    "column-filters",
+    "virtual-scroll",
+    "virtualization",
+    "row-selection",
+    "bulk-actions",
+    "sticky-header",
+    "column-resize",
+    "accessibility",
+    "aria",
+    "wai-aria",
+    "responsive",
+    "csv",
+    "xlsx",
+    "pdf",
+    "export",
+    "accordion",
+    "typescript",
+    "dark-mode",
+    "i18n"
+  ],
+  "author": "Mykhailo Kravtsov <117070894+Insider515@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Insider515/vantable.git"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1",
+    "typescript": "^7.0.2"
+  },
+  "homepage": "https://github.com/Insider515/vantable#readme",
+  "bugs": {
+    "url": "https://github.com/Insider515/vantable/issues"
+  }
+}
