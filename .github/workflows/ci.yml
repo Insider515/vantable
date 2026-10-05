@@ -1,8 +1,7 @@
 # CI for the vantable package: syntax + types + DOM/export tests for the
-# library, build + unit tests for the Go export binary.
-# NOTE: while vantable lives inside the GeekProxy repo this file is inert —
-# GitHub only runs workflows from the repository root. It becomes active once
-# the package is published as its own repo.
+# library, build + unit tests for the Go export binary. The DOM tests include
+# a few that drive headless Chrome, so the browser is located up front and a
+# missing one fails the run instead of skipping them.
 name: ci
 
 on:
@@ -18,6 +17,11 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      - name: locate Chrome for the browser tests
+        run: |
+          BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)"
+          echo "CHROME_PATH=$BIN" >> "$GITHUB_ENV"
+          "$BIN" --version
       - run: npm run lint
       - run: npm run typecheck
       - name: dist is in sync with src

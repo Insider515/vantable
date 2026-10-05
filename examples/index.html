@@ -10,6 +10,13 @@
     h1 { font-size: 20px; } h2 { font-size: 15px; margin-top: 28px; }
     .demo { max-width: 1000px; margin: 0 auto; }
     .hint { font-size: 13px; opacity: .8; }
+    /* Classes handed to remove.confirm in demo 7: they are ADDED to the
+       built-in .vt-modal* ones. Note the doubled selector on the button: the
+       built-in sheet is injected into <head> after this one, so at equal
+       specificity its `.vt-btn { font: inherit }` would win. */
+    .demo-modal { border: 2px solid #0d4a94; }
+    .demo-foot { justify-content: space-between; }
+    .vt-btn.demo-danger { font-weight: 700; letter-spacing: .02em; }
     @media (prefers-color-scheme: dark) { body { background: #10141c; color: #e6e9f0; } }
   </style>
 </head>
@@ -92,6 +99,12 @@
       appears above the table. Disabled rows are the ones with status
       “Disabled” — <code>selectable</code> refuses them. The selection is kept by
       row id, so it survives search, sort and paging.
+    </p>
+    <p class="hint">
+      <b>Delete</b> here opens the built-in dialog restyled through
+      <code>remove.confirm</code>: a heading of its own plus three classes of
+      ours on the box, the button row and the Delete button. The dialog also
+      takes this table’s theme and type, so it matches the table that opened it.
     </p>
     <p class="hint">
       <button type="button" id="sel-all">selectAll()</button>
@@ -461,7 +474,17 @@
         // menu: false — the old layout, for comparison with the dropdown above
         {
           label: 'Actions', type: 'actions', menu: false,
-          edit: { enabled: true }, remove: { enabled: true }
+          edit: { enabled: true },
+          remove: {
+            enabled: true,
+            // The look of the confirmation dialog, per table.
+            confirm: {
+              title: 'Delete this user?',
+              className: 'demo-modal',
+              footClassName: 'demo-foot',
+              confirmClassName: 'demo-danger'
+            }
+          }
         }
       ],
       data: selUsers,

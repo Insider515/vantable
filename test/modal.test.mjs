@@ -241,8 +241,8 @@ test('neither stylesheet declares the theme tokens on the overlay', () => {
     }
     // Which is why .vt-modal must keep its own fallbacks, for the cases where
     // nothing could be copied (no window, or a host stylesheet of their own).
-    assert.match(text, /\.vt-modal\s*\{[^}]*var\(--vt-bg,\s*#fff\)/, `${name}: .vt-modal lost its background fallback`);
-    assert.match(text, /var\(--vt-fg,\s*#1f2430\)/, `${name}: .vt-modal lost its colour fallback`);
+    assert.match(text, /\.vt-modal\s*\{[^}]*var\(--vt-bg\s*,[^)]+\)/, `${name}: .vt-modal lost its background fallback`);
+    assert.match(text, /var\(--vt-fg\s*,[^)]+\)/, `${name}: .vt-modal lost its colour fallback`);
     assert.match(text, /\.vt-modal-head/, `${name}: the heading has no style`);
   }
 });

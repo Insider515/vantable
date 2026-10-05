@@ -1089,7 +1089,12 @@ new Vantable('#host', {
 
 A title renders as `.vt-modal-head`. The title and the message are escaped as
 text, and a class name goes through the same attribute escaping as the rest of
-the markup. To restyle every dialog on the page instead of one table's, write
+the markup. One caveat about the cascade: the built-in sheet is injected into
+`<head>` when the first table is created, so it sits **after** a `<style>` of
+yours already on the page. At equal specificity it wins — `.vt-btn { font:
+inherit }` will override a bare `.my-btn { font-weight: 700 }`. Write the
+doubled selector (`.vt-btn.my-btn`, `.vt-modal.my-modal`) or ship your CSS
+through `styles: { css, extend: true }`, which puts it after ours. To restyle every dialog on the page instead of one table's, write
 your own rules for `.vt-modal-overlay`, `.vt-modal`, `.vt-modal-head`,
 `.vt-modal-body` and `.vt-modal-foot`. The tokens are not worth overriding there
 — they arrive inline from the table, which wins over a stylesheet — so change
