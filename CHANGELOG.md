@@ -29,9 +29,7 @@ All notable changes to this package are documented here. The format follows
 
 ## [0.1.0] — 2026-10-03
 
-Everything below is the work that led to the first published version. The
-package has not been released to npm yet, so none of it is a breaking change
-for anyone.
+The first release on npm. Everything below is the work that led to it.
 
 ### Added
 
