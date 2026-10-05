@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-10-05
+
+### Changed
+
+- **A server-mode search no longer runs as you type.** The box gets a magnifier
+  button (`.vt-search-submit`, named by the new `searchSubmit` label) and sends
+  the query when it is pressed or when `Enter` is hit in the box — one request
+  per finished query instead of one per keystroke, which is what a database
+  search should cost. Client-mode search is unchanged: it still filters the
+  loaded rows on every keystroke.
+
 ## [0.2.0] — 2026-10-05
 
 ### Added

@@ -376,6 +376,7 @@
 
   var DEFAULT_LABELS = {
     search: 'Search…',
+    searchSubmit: 'Search',
     perPage: 'Rows',
     prev: 'Prev',
     next: 'Next',
@@ -550,6 +551,7 @@
     this._active = { r: 0, c: 0 };                    // roving-tabindex cell (row, col)
     this._cellMode = null;                            // cell currently in interaction mode
     this._closeModal = null;                          // closes the dialog that is up, if any
+    this._onSearchType = null;                        // live-search handler (client mode only)
     this._pendingFocus = false;                       // focus active cell after next paint
 
     this._build();
@@ -1433,14 +1435,26 @@
       this._renderHead();
     },
 
+    /** The search box, plus the submit button in server mode ('' when search is
+     *  off). Server mode queries a database, so it asks instead of guessing when
+     *  the typing is finished: the query goes out on that button or on Enter. */
+    _searchHtml: function () {
+      if (this.searchMode === 'off') return '';
+      var L = this.labels;
+      var html = '<input type="search" class="vt-search" placeholder="' + escAttr(L.search) +
+        '" aria-label="' + escAttr(L.search) + '" value="' + escAttr(this.state.q) + '">';
+      if (this.searchMode === 'server') {
+        html += '<button type="button" class="vt-btn vt-search-submit" aria-label="' +
+          escAttr(L.searchSubmit) + '" title="' + escAttr(L.searchSubmit) + '">&#128269;</button>';
+      }
+      return html;
+    },
+
     /** Render the toolbar: search box, column menu, export and print buttons. */
     _renderToolbar: function () {
       var L = this.labels, html = '';
       html += '<div class="vt-toolbar-left">';
-      if (this.searchMode !== 'off') {
-        html += '<input type="search" class="vt-search" placeholder="' + escAttr(L.search) +
-          '" aria-label="' + escAttr(L.search) + '" value="' + escAttr(this.state.q) + '">';
-      }
+      html += this._searchHtml();
       html += '</div><div class="vt-toolbar-right">';
       if (this.columnPicker) {
         html += '<div class="vt-cols"><button type="button" class="vt-btn vt-cols-btn" aria-expanded="false">' +
@@ -1865,16 +1879,50 @@
         '</div>';
     },
 
+    /**
+     * Listen for whatever asks for a query in this mode, and only that: client
+     * mode filters the loaded rows as you type, server mode waits for the
+     * submit button or for Enter in the box. With search off — or in the mode
+     * a listener does not belong to — it is never registered at all.
+     */
+    _bindSearch: function () {
+      var self = this;
+      if (this.searchMode === 'client') {
+        // Handed to the shared input listener rather than one of its own, so
+        // the box and the filters are served by a single listener.
+        this._onSearchType = debounce(function (v) { self._applySearch(v); }, 150);
+        return;
+      }
+      if (this.searchMode !== 'server') return;
+      // Bound on the root rather than the table, so Enter in the box works with
+      // keyboard navigation switched off too.
+      this.el.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || !e.target.classList.contains('vt-search')) return;
+        e.preventDefault();
+        self._applySearch(e.target.value);
+      });
+      this.el.addEventListener('click', function (e) {
+        if (!e.target.closest || !e.target.closest('.vt-search-submit')) return;
+        // _searchHtml renders the button only next to the box, so there is one.
+        self._applySearch(self.$toolbar.querySelector('.vt-search').value);
+      });
+    },
+
+    /** Run a query: back to the first page, then re-render (in server mode
+     *  that is one request to server.fetch). */
+    _applySearch: function (q) {
+      this.state.q = q;
+      this.state.page = 1;
+      this.refresh();
+    },
+
     /* ---- events (delegated on the root) ---------------------------- */
 
     /** Attach the delegated listeners once; everything below works on the current markup. */
     _bind: function () {
       var self = this;
 
-      // Search (debounced).
-      var onSearch = debounce(function (v) {
-        self.state.q = v; self.state.page = 1; self.refresh();
-      }, self.searchMode === 'server' ? 300 : 150);
+      this._bindSearch();
 
       // Filter typing is debounced like the search box; a select applies at once.
       var onFilter = debounce(function (input) { self._onFilterInput(input); },
@@ -1882,7 +1930,10 @@
 
       this.el.addEventListener('input', function (e) {
         var t = e.target;
-        if (t.classList.contains('vt-search')) { onSearch(t.value); return; }
+        if (t.classList.contains('vt-search')) {
+          if (self._onSearchType) self._onSearchType(t.value);
+          return;
+        }
         if (t.classList.contains('vt-filter') && t.tagName !== 'SELECT') onFilter(t);
       });
 
@@ -2554,7 +2605,7 @@
     };
   }
 
-  Vantable.version = '0.2.0';
+  Vantable.version = '0.3.0';
   Vantable.css = DEFAULT_CSS;            // the default stylesheet as a string
   Vantable.injectStyles = injectStyles;  // inject defaults manually if needed
   Vantable.serverExport = serverExport;  // ready-made XLSX/PDF adapter (→ your Go binary)

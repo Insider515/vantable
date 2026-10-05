@@ -284,6 +284,8 @@ export interface VantableAccordion<Row = VantableRow> {
 export interface VantableLabels {
   /** Placeholder and aria-label of the search box. */
   search: string;
+  /** Accessible name and tooltip of the search button (server mode). */
+  searchSubmit: string;
   /** "Rows" in front of the page-size select. */
   perPage: string;
   /** The pager's previous / next buttons. */

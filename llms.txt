@@ -5,7 +5,7 @@
 > Bootstrap, no XLSX library. The default stylesheet is injected from the script
 > itself, so a table is styled with nothing else included.
 
-Version: 0.2.0 · License: MIT · Runtime dependencies: none.
+Version: 0.3.0 · License: MIT · Runtime dependencies: none.
 
 ## Install
 
@@ -43,6 +43,9 @@ with `styles: false`).
 - data: client-side rows. rowId: the id field (default `'id'`).
 - search / sort: `'live'|'client'|'local'` (in the browser), `'server'|'db'|
   'remote'` (through `server.fetch`), `false`. Default follows the source.
+  Client-mode search filters as you type; server-mode search does NOT — the box
+  gets a magnifier button (`.vt-search-submit`, label `searchSubmit`) and the
+  query is sent on that button or on Enter, one request per finished query.
 - searchFields: which keys the global search looks at (default: all data columns).
 - defaultSort, defaultDir: the starting order.
 - pagination: `false` or `{ perPage, options }` (default 50 / 50-100-250-500).

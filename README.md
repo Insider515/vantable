@@ -135,6 +135,14 @@ Search and sort each have **two independent modes** you choose when embedding:
   rows are paginated server-side (a client filter would only touch the current
   page).
 
+**When the query is run differs with the mode, and that is deliberate.** A
+client-mode search filters the loaded rows on every keystroke, because that
+costs nothing. A server-mode search does **not** run as you type: the box gets a
+magnifier button (`.vt-search-submit`, named by the `searchSubmit` label), and
+the query is sent when you press it or hit `Enter` in the box — one request per
+finished query instead of one per keystroke. A new query always starts from page
+one, and submitting an empty box lifts the search.
+
 ```js
 // all in the browser (live)
 new Vantable('#host', { columns, data, search: 'live', sort: 'client' });
@@ -249,7 +257,7 @@ table.setColumnState(snapshot);     // restore order + visibility + widths + pin
 Statics:
 
 ```js
-Vantable.version;                       // '0.2.0'
+Vantable.version;                       // '0.3.0'
 Vantable.css;                           // the default stylesheet as a string
 Vantable.injectStyles(css?);            // inject a stylesheet (defaults when omitted)
 Vantable.serverExport(url, opts);       // export adapter: POST payload -> file
@@ -964,7 +972,7 @@ new Vantable('#host', {
 ```
 
 The full list of keys is the `VantableLabels` interface in the type definitions —
-33 of them, covering the toolbar, the pager, the row actions, the confirmation
+34 of them, covering the toolbar, the pager, the row actions, the confirmation
 dialog, the async states, the selection, the filters and every `aria-label` the
 table sets. `{n}` in the `selected` label is replaced with the number of
 selected rows. Two tables on one page can speak different languages.
@@ -1029,7 +1037,8 @@ stylesheet manually — `Vantable.injectStyles()` for the defaults,
 file for `<link>`/bundler import: `vantable/src/vantable.css` (`import 'vantable/css'`).
 
 The class names (`.vt-root`, `.vt-table`, `.vt-th`, `.vt-td`, `.vt-tr`, `.vt-btn`,
-`.vt-badge`, `.vt-link`, `.vt-actions`, `.vt-modal`, …) are part of the public API
+`.vt-badge`, `.vt-link`, `.vt-actions`, `.vt-modal`, `.vt-search`,
+`.vt-search-submit`, …) are part of the public API
 and won't change within a major version. The column operations add
 `.vt-resizer`, `.vt-th-dragging`, `.vt-drop-target`, `.vt-pin-left`,
 `.vt-pin-right`, `.vt-sticky-head`, `.vt-table-fixed`, `.vt-cols`,

@@ -1,6 +1,6 @@
 {
   "name": "vantable",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Zero-dependency vanilla-JS data table for dashboards: client & server pagination, sorting, search, rich column types (links, copy, status, tags, images), inline & modal editing, row actions, accordion master/detail rows, CSV export (XLSX/PDF via adapters) and print. Multi-instance, no jQuery/Bootstrap.",
   "main": "src/vantable.js",
   "module": "src/vantable.mjs",

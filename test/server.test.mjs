@@ -125,20 +125,141 @@ test('prev is disabled on the first page and next on the last', async () => {
   assert.ok(t.el.querySelector('.vt-next').disabled);
 });
 
-test('the search box is debounced by 300ms in server mode', async () => {
+/** Type into the search box without asking for the query to be run. */
+function type(t, value) {
+  const input = t.el.querySelector('input.vt-search');
+  input.value = value;
+  input.dispatchEvent(new (t.el.ownerDocument.defaultView.Event)('input', { bubbles: true }));
+  return input;
+}
+/** Press a key in an element, the way a user would. */
+function press(t, el, key) {
+  el.dispatchEvent(new (t.el.ownerDocument.defaultView.KeyboardEvent)('keydown', { key, bubbles: true }));
+}
+
+test('typing in server mode queries nothing — a database is not asked per keystroke', async () => {
   const { t, calls } = mount();
   await settle();
-  const input = t.el.querySelector('input.vt-search');
-  input.value = 'an';
-  input.dispatchEvent(new (t.el.ownerDocument.defaultView.Event)('input', { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 120));
-  assert.equal(calls.length, 1, 'nothing sent yet');
-  input.value = 'ann';
-  input.dispatchEvent(new (t.el.ownerDocument.defaultView.Event)('input', { bubbles: true }));
+  type(t, 'an');
+  type(t, 'ann');
   await new Promise((r) => setTimeout(r, 400));
-  assert.equal(calls.length, 2, 'one request for the last value');
+  assert.equal(calls.length, 1, 'still only the initial load');
+  assert.equal(t.state.q, '', 'and nothing was applied behind the button');
+});
+
+test('the search button sends the typed query', async () => {
+  const { t, calls } = mount();
+  await settle();
+  type(t, 'ann');
+  t.el.querySelector('.vt-search-submit').click();
+  await settle();
+  assert.equal(calls.length, 2, 'exactly one request for the finished query');
   assert.equal(calls[1].q, 'ann');
-  assert.equal(calls[1].page, 1);
+  assert.equal(calls[1].page, 1, 'and it starts from the first page');
+});
+
+test('Enter in the box does what the button does', async () => {
+  const { t, calls } = mount();
+  await settle();
+  press(t, type(t, 'bob'), 'Enter');
+  await settle();
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].q, 'bob');
+});
+
+test('any other key in the box sends nothing', async () => {
+  const { t, calls } = mount();
+  await settle();
+  const input = type(t, 'bo');
+  press(t, input, 'b');
+  press(t, input, 'ArrowLeft');
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(calls.length, 1);
+});
+
+test('Enter outside the search box never queries', async () => {
+  const { t, calls } = mount();
+  await settle();
+  type(t, 'ann');
+  press(t, t.el.querySelector('tbody tr.vt-tr td'), 'Enter');
+  press(t, t.el.querySelector('.vt-search-submit'), 'Enter');
+  await settle();
+  assert.equal(calls.length, 1, 'the grid keyboard is not a search trigger');
+  assert.equal(t.state.q, '');
+});
+
+test('a query asked from a later page starts over at page one', async () => {
+  const { t, calls } = mount({ pagination: { perPage: 2, options: [2] } });
+  await settle();
+  t.el.querySelector('.vt-next').click();
+  await settle();
+  assert.equal(calls[calls.length - 1].page, 2);
+  type(t, 'ann');
+  t.el.querySelector('.vt-search-submit').click();
+  await settle();
+  assert.equal(calls[calls.length - 1].page, 1);
+});
+
+test('clearing the box and asking again lifts the query', async () => {
+  const { t, calls } = mount();
+  await settle();
+  type(t, 'ann');
+  t.el.querySelector('.vt-search-submit').click();
+  await settle();
+  type(t, '');
+  t.el.querySelector('.vt-search-submit').click();
+  await settle();
+  assert.equal(calls[calls.length - 1].q, '');
+  assert.equal(t.state.q, '');
+});
+
+test('the same query asked twice is sent twice — the user asked for it', async () => {
+  const { t, calls } = mount();
+  await settle();
+  type(t, 'ann');
+  t.el.querySelector('.vt-search-submit').click();
+  await settle();
+  t.el.querySelector('.vt-search-submit').click();
+  await settle();
+  assert.equal(calls.length, 3);
+  assert.deepEqual([calls[1].q, calls[2].q], ['ann', 'ann']);
+});
+
+test('the button is named for screen readers and translatable', async () => {
+  const { t } = mount({ labels: { searchSubmit: 'Шукати' } });
+  await settle();
+  const go = t.el.querySelector('.vt-search-submit');
+  assert.equal(go.getAttribute('aria-label'), 'Шукати');
+  assert.equal(go.getAttribute('title'), 'Шукати');
+  assert.equal(go.type, 'button', 'it never submits a surrounding form');
+});
+
+test('the button belongs to server mode only', async () => {
+  const { t } = mount();
+  await settle();
+  assert.ok(t.el.querySelector('.vt-search-submit'), 'server mode has it');
+
+  const client = mount({ search: 'client' });
+  await settle();
+  assert.equal(client.t.el.querySelector('.vt-search-submit'), null, 'client mode filters as you type');
+  assert.ok(client.t.el.querySelector('input.vt-search'), 'and still has the box');
+
+  const off = mount({ search: false });
+  await settle();
+  assert.equal(off.t.el.querySelector('.vt-search-submit'), null);
+  assert.equal(off.t.el.querySelector('input.vt-search'), null);
+});
+
+test('client-mode search over a server page filters as you type, with no q in the request', async () => {
+  // A client-mode search still re-renders, and over a server source a re-render
+  // is a fetch of the same page — but the query itself stays in the browser and
+  // is applied to the reply, which is what separates the two modes.
+  const { t, calls } = mount({ search: 'client' });
+  await settle();
+  type(t, 'ann');
+  await new Promise((r) => setTimeout(r, 200));
+  assert.deepEqual(names(t), ['Ann'], 'filtered in the browser');
+  assert.equal(calls[calls.length - 1].q, undefined, 'the query never reaches the server');
 });
 
 test('a rejected fetch emits error, clears the view and shows the error row', async () => {

@@ -182,7 +182,8 @@ test('the copy button title and its copied state', async () => {
 
 test('a fully translated table shows no English anywhere', () => {
   const ua = {
-    search: 'Пошук…', perPage: 'Рядків', prev: 'Назад', next: 'Далі', empty: 'Немає записів',
+    search: 'Пошук…', searchSubmit: 'Шукати', perPage: 'Рядків', prev: 'Назад', next: 'Далі',
+    empty: 'Немає записів',
     edit: 'Правка', remove: 'Видалити', save: 'Зберегти', cancel: 'Скасувати', confirmRemove: 'Видалити?',
     exportCsv: 'ЦСВ', exportXlsx: 'Ексель', exportPdf: 'ПДФ', print: 'Друк', actions: 'Дії',
     page: 'Стор', of: 'з', copy: 'Копіювати', copied: 'Скопійовано', columns: 'Колонки',
