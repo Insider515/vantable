@@ -1,6 +1,9 @@
 /* Vantable — zero-dependency styles. Theme via CSS custom properties on .vt-root
    (or any ancestor). Dark mode auto-applies with prefers-color-scheme and can be
-   forced with [data-vt-theme="dark"] / "light". */
+   forced with [data-vt-theme="dark"] / "light". The built-in dialog is a child
+   of <body>: it is given the table's resolved tokens inline when it opens, so
+   this sheet must not declare them on .vt-modal-overlay — that would override
+   whatever the page has set on an ancestor. */
 
 .vt-root {
   --vt-fg: #1f2430;
@@ -131,6 +134,7 @@
   border-radius: 12px; min-width: 300px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,.3);
   overflow: hidden;
 }
+.vt-modal-head { padding: 18px 20px 0; font-size: 16px; font-weight: 600; }
 .vt-modal-body { padding: 20px; font-size: 15px; }
 .vt-modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 18px; }
 

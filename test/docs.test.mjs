@@ -123,11 +123,21 @@ test('every runnable example in the Ukrainian README parses', async () => {
   }
 });
 
+test('both READMEs warn that the remove url is not encoded for you', () => {
+  // The documented example interpolates a row value into the path, so the
+  // caveat has to sit next to it in both languages.
+  for (const [name, md] of [['README.md', EN], ['README.uk.md', UK]]) {
+    assert.ok(md.includes('encodeURIComponent'), `${name}: no encoding caveat`);
+    assert.match(md, /verbatim|дослівно/, `${name}: it does not say the url is used as it is`);
+  }
+});
+
 test('the changelog exists, is dated and describes this version', () => {
   assert.ok(existsSync(path.join(ROOT, 'CHANGELOG.md')));
   const log = read('CHANGELOG.md');
   assert.match(log, /# Changelog/);
-  assert.match(log, /Unreleased|\[0\.1\.0\]/, 'the current state is described');
+  assert.match(log, new RegExp(`Unreleased|\\[${PKG.version.replace(/\./g, '\\.')}\\]`),
+    'the current state is described');
   assert.ok(log.includes('semantic versioning') || log.includes('semver'));
 });
 

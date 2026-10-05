@@ -56,6 +56,28 @@ export interface VantableEditAction<Row = VantableRow> {
   onEdit?: (row: Row) => void;
 }
 
+/**
+ * The look of the built-in confirmation dialog. Every class here is ADDED to
+ * the built-in one, so `.vt-modal*` keeps working and your rules sit on top of
+ * it. The dialog also inherits the table's own `theme` and `mode`.
+ */
+export interface VantableConfirmStyle {
+  /** A heading above the message (none by default). */
+  title?: string;
+  /** Your class on the dialog box, next to `vt-modal`. */
+  className?: string;
+  /** Your class on the backdrop, next to `vt-modal-overlay`. */
+  overlayClassName?: string;
+  /** Your class on the message, next to `vt-modal-body`. */
+  bodyClassName?: string;
+  /** Your class on the button row, next to `vt-modal-foot`. */
+  footClassName?: string;
+  /** Your class on the Cancel button, next to `vt-btn`. */
+  cancelClassName?: string;
+  /** Your class on the Delete button, next to `vt-btn vt-danger`. */
+  confirmClassName?: string;
+}
+
 export interface VantableRemoveAction<Row = VantableRow> {
   enabled?: boolean;
   label?: string;
@@ -67,6 +89,8 @@ export interface VantableRemoveAction<Row = VantableRow> {
   /** Re-fetch/refresh after a successful remove (default `true`). */
   reload?: boolean;
   onRemove?: (row: Row) => void;
+  /** The look of the confirmation dialog this action opens. */
+  confirm?: VantableConfirmStyle;
 }
 
 /** How a row's actions are presented: a dropdown (default) or a row of buttons. */
@@ -559,7 +583,8 @@ export default class Vantable<Row = VantableRow> {
   columnState(): VantableColumnLayout[];
   /** Restore a `columnState()` snapshot. */
   setColumnState(state?: Array<Partial<VantableColumnLayout>>): this;
-  /** Remove the table from the DOM and detach listeners. */
+  /** Remove the table from the DOM, detach listeners and close its
+   *  confirmation dialog if one is open. */
   destroy(): void;
 }
 

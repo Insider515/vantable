@@ -249,7 +249,7 @@ table.setColumnState(snapshot);     // restore order + visibility + widths + pin
 Statics:
 
 ```js
-Vantable.version;                       // '0.1.0'
+Vantable.version;                       // '0.2.0'
 Vantable.css;                           // the default stylesheet as a string
 Vantable.injectStyles(css?);            // inject a stylesheet (defaults when omitted)
 Vantable.serverExport(url, opts);       // export adapter: POST payload -> file
@@ -464,6 +464,8 @@ or three buttons, and the menu takes any number of them:
   instead — that row is in a different mode, not browsing actions.
 - `menu: false` restores the previous rendering (all actions as buttons in the
   cell), which is what the screenshots of narrow columns wrap into.
+- **Delete** asks first, in the built-in dialog. It follows the table's theme,
+  and `remove.confirm` restyles it — see [Styling](#styling).
 
 ## Row selection
 
@@ -665,6 +667,11 @@ new Vantable('#host', {
 });
 ```
 
+- **The URL goes to `fetch` verbatim.** Whatever your `url` function returns is
+  used as it is — nothing is encoded, because the value may be a whole URL with
+  a query of its own. Interpolating a row value straight into the path, as the
+  example above does, lets a value like `1/../admin` pick a different endpoint,
+  so encode what comes from the data: ``url: (row) => `/api/users/${encodeURIComponent(row.id)}` ``.
 - **Nothing is added behind your back.** With no `headers` the request carries
   none, and `credentials` is left at the browser default (`same-origin`), so
   session cookies travel with a same-origin request and nothing is sent
@@ -1041,6 +1048,52 @@ on the root (the card layout hangs off the latter), and the row-action dropdown
 adds `.vt-actions-menu`, `.vt-act-trigger`, `.vt-act-menu`, `.vt-act-menu-up`
 and `.vt-act-item`. The `vt-spin` / `vt-shimmer` animations are
 skipped under `prefers-reduced-motion`.
+
+### The confirmation dialog
+
+The dialog the `remove` action opens is a child of `<body>`, outside
+`.vt-root`, so it inherits the page and not the table. As it opens, the look the
+table resolves to right then — the theme tokens, the font family, the font size
+and the line height — is copied onto `.vt-modal-overlay` inline, so the dialog
+matches the table that opened it: your own CSS on `.vt-root`, the `theme`
+overrides and dark mode are already in those values. Two tables with different
+themes on one page open dialogs that each match their own table, and where the
+page and the table disagree the dialog follows the table.
+
+Its look is yours to change per table, through the config the remove action
+itself comes from — `actions.remove.confirm`, or `remove.confirm` on the
+`actions` column when the table has no `actions` option (with both, the
+`actions` option wins and the column's own `remove` is not read at all). Your
+classes are **added** to the built-in ones, so `.vt-modal*` keeps working and
+nothing has to be replaced:
+
+```js
+new Vantable('#host', {
+  columns, data,
+  actions: {
+    remove: {
+      url: (row) => `/api/users/${row.id}`,
+      confirm: {
+        title: 'Delete the record',            // a heading above the message; none by default
+        overlayClassName: 'my-veil',           // added to .vt-modal-overlay
+        className: 'my-modal',                 // added to .vt-modal
+        bodyClassName: 'my-body',              // added to .vt-modal-body
+        footClassName: 'my-foot',              // added to .vt-modal-foot
+        cancelClassName: 'my-btn',             // added to the Cancel button
+        confirmClassName: 'my-btn my-btn-red'  // added to Delete, which keeps .vt-danger
+      }
+    }
+  }
+});
+```
+
+A title renders as `.vt-modal-head`. The title and the message are escaped as
+text, and a class name goes through the same attribute escaping as the rest of
+the markup. To restyle every dialog on the page instead of one table's, write
+your own rules for `.vt-modal-overlay`, `.vt-modal`, `.vt-modal-head`,
+`.vt-modal-body` and `.vt-modal-foot`. The tokens are not worth overriding there
+— they arrive inline from the table, which wins over a stylesheet — so change
+them on `.vt-root` instead.
 
 ## TypeScript
 

@@ -27,7 +27,14 @@ const columns: VantableColumnDef<User>[] = [
   {
     label: 'Actions', type: 'actions',
     edit: { enabled: true },
-    remove: { enabled: true, url: (r) => `/api/users/${r.id}`, method: 'DELETE' },
+    remove: {
+      enabled: true, url: (r) => `/api/users/${r.id}`, method: 'DELETE',
+      confirm: {
+        title: 'Delete', className: 'my-modal', overlayClassName: 'my-veil',
+        bodyClassName: 'my-body', footClassName: 'my-foot',
+        cancelClassName: 'my-btn', confirmClassName: 'my-btn my-btn-red'
+      }
+    },
     custom: [{ label: 'Ping', onClick: (r) => console.log(r.name) }],
     menu: { icon: '⋯', label: 'Row actions' }
   },

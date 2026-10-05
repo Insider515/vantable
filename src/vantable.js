@@ -213,6 +213,7 @@
 .vt-pageinfo{color:var(--vt-muted)}
 .vt-modal-overlay{position:fixed;inset:0;background:rgba(15,20,30,.5);display:flex;align-items:center;justify-content:center;z-index:9999}
 .vt-modal{background:var(--vt-bg,#fff);color:var(--vt-fg,#1f2430);border-radius:12px;min-width:300px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.vt-modal-head{padding:18px 20px 0;font-size:16px;font-weight:600}
 .vt-modal-body{padding:20px;font-size:15px}.vt-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}
 .vt-table-fixed{table-layout:fixed}
 .vt-th{position:relative}
@@ -333,6 +334,40 @@
     if (cfg.extend) injectStyles();
     if (cfg.css) injectStyles(cfg.css);
     if (cfg.href) linkStyles(cfg.href);
+  }
+
+  /** Join a built-in class name with the host's own one, if one was given. */
+  function joinClass(base, extra) {
+    return extra ? base + ' ' + extra : base;
+  }
+
+  // The theme tokens, read off the built-in stylesheet so this list cannot
+  // drift from it. Only declared tokens are collected: `--vt-badge` and
+  // `--vt-sticky-top` are read by the sheet but set by the caller, never here.
+  var TOKENS = (function () {
+    var out = [], seen = {}, re = /(--vt-[a-z-]+)\s*:/g, m;
+    while ((m = re.exec(DEFAULT_CSS))) {
+      if (!seen[m[1]]) { seen[m[1]] = 1; out.push(m[1]); }
+    }
+    return out;
+  })();
+
+  /**
+   * Copy the look a table currently resolves to onto a node outside it. The
+   * dialog hangs off <body>, so it inherits the page, not the table; copying
+   * the tokens and the typography makes it match the table that opened it,
+   * with the host's own CSS, the `theme` overrides and dark mode already baked
+   * into the computed values. Where the document has no window to compute
+   * with, nothing is copied and the stylesheet's own fallbacks stand in.
+   */
+  function copyTheme(from, to) {
+    var view = from.ownerDocument && from.ownerDocument.defaultView;
+    if (!view || typeof view.getComputedStyle !== 'function') return;
+    var cs = view.getComputedStyle(from);
+    TOKENS.concat(['font-family', 'font-size', 'line-height']).forEach(function (prop) {
+      var v = cs.getPropertyValue(prop);
+      if (v) to.style.setProperty(prop, v.trim());
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -514,6 +549,7 @@
     this.keyboard = options.keyboard !== false;       // grid keyboard navigation
     this._active = { r: 0, c: 0 };                    // roving-tabindex cell (row, col)
     this._cellMode = null;                            // cell currently in interaction mode
+    this._closeModal = null;                          // closes the dialog that is up, if any
     this._pendingFocus = false;                       // focus active cell after next paint
 
     this._build();
@@ -648,6 +684,9 @@
     destroy: function () {
       if (this._onDocClick) document.removeEventListener('click', this._onDocClick);
       if (this._onResize) window.removeEventListener('resize', this._onResize);
+      // The dialog hangs off <body>, so clearing the table would leave it up
+      // — still able to confirm a removal on a table that no longer exists.
+      if (this._closeModal) this._closeModal();
       this.el.innerHTML = '';
       this._emit('destroy');
     },
@@ -2006,13 +2045,15 @@
       this._paint();
     },
 
-    /** Ask before removing a row, then call the endpoint or drop it locally. */
+    /** Ask before removing a row, then call the endpoint or drop it locally.
+     *  `rm.confirm` is the host's look for the dialog (see README "Styling"). */
     _confirmRemove: function (id, row, rm) {
       var self = this;
+      var look = isObj(rm.confirm) ? rm.confirm : {};
       this._modal(this.labels.confirmRemove, [
-        { label: this.labels.cancel, className: '' },
+        { label: this.labels.cancel, className: look.cancelClassName },
         {
-          label: this.labels.remove, className: 'vt-danger', onClick: function () {
+          label: this.labels.remove, className: joinClass('vt-danger', look.confirmClassName), onClick: function () {
             if (isFn(rm.onRemove)) rm.onRemove(row);
             var url = resolve(rm.url, row);
             if (url) {
@@ -2027,20 +2068,36 @@
             }
           }
         }
-      ]);
+      ], look);
     },
 
     /* ---- built-in modal (no Bootstrap) ------------------------------ */
 
-    /** A built-in confirmation dialog (no Bootstrap, no dependencies). */
-    _modal: function (message, buttons) {
+    /** A built-in confirmation dialog (no Bootstrap, no dependencies).
+     *  `look` restyles it: a title and a class of your own on each part. Those
+     *  classes are ADDED to the built-in ones, which stay as they are. The
+     *  caller passes an object (`{}` when the host configured no look). */
+    _modal: function (message, buttons, look) {
       var overlay = document.createElement('div');
-      overlay.className = 'vt-modal-overlay';
+      overlay.className = joinClass('vt-modal-overlay', look.overlayClassName);
+      // The dialog is a child of <body>, outside this table's .vt-root, so it
+      // is given the look the table resolves to right now.
+      copyTheme(this.el, overlay);
       var box = document.createElement('div');
-      box.className = 'vt-modal';
-      box.innerHTML = '<div class="vt-modal-body">' + esc(message) + '</div><div class="vt-modal-foot"></div>';
+      box.className = joinClass('vt-modal', look.className);
+      box.innerHTML =
+        (look.title == null || look.title === '' ? '' : '<div class="vt-modal-head">' + esc(look.title) + '</div>') +
+        '<div class="' + escAttr(joinClass('vt-modal-body', look.bodyClassName)) + '">' + esc(message) + '</div>' +
+        '<div class="' + escAttr(joinClass('vt-modal-foot', look.footClassName)) + '"></div>';
       var foot = box.querySelector('.vt-modal-foot');
-      function close() { if (overlay.parentNode) document.body.removeChild(overlay); }
+      var self = this;
+      // Only the dialog that is still up may clear the handle: opening a second
+      // one over the first replaces it, and closing the first must not wipe it.
+      function close() {
+        if (overlay.parentNode) document.body.removeChild(overlay);
+        if (self._closeModal === close) self._closeModal = null;
+      }
+      this._closeModal = close;
       buttons.forEach(function (b) {
         var btn = document.createElement('button');
         btn.type = 'button';
@@ -2497,7 +2554,7 @@
     };
   }
 
-  Vantable.version = '0.1.0';
+  Vantable.version = '0.2.0';
   Vantable.css = DEFAULT_CSS;            // the default stylesheet as a string
   Vantable.injectStyles = injectStyles;  // inject defaults manually if needed
   Vantable.serverExport = serverExport;  // ready-made XLSX/PDF adapter (→ your Go binary)

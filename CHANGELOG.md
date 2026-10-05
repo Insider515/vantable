@@ -4,7 +4,30 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] — 2026-10-05
+
+### Added
+
+- **The delete dialog is restylable and follows the table.** `actions.remove.confirm`
+  takes a title and a class of your own for every part of the dialog, added to
+  the built-in `.vt-modal*` classes rather than replacing them; `.vt-modal-head`
+  styles the new heading.
+- **The dialog matches the table that opened it.** It hangs off `<body>`, outside
+  `.vt-root`, so the tokens and the typography the table resolves to — including
+  a stylesheet of your own, the `theme` overrides and dark mode — are copied onto
+  `.vt-modal-overlay` as it opens.
+
+### Fixed
+
+- `destroy()` closes an open confirmation dialog, so a removal can no longer be
+  confirmed on a table that is already gone.
+
+### Documentation
+
+- `remove.url` reaches `fetch` verbatim: nothing is encoded, so row values
+  interpolated into the path need `encodeURIComponent`.
+
+## [0.1.0] — 2026-10-03
 
 Everything below is the work that led to the first published version. The
 package has not been released to npm yet, so none of it is a breaking change

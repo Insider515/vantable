@@ -5,7 +5,7 @@
 > Bootstrap, no XLSX library. The default stylesheet is injected from the script
 > itself, so a table is styled with nothing else included.
 
-Version: 0.1.0 · License: MIT · Runtime dependencies: none.
+Version: 0.2.0 · License: MIT · Runtime dependencies: none.
 
 ## Install
 
@@ -49,6 +49,16 @@ with `styles: false`).
 - server: `{ fetch({ page, perPage, q, fields, sort, dir, filters }) -> { rows, total } }`.
 - editable + onSave(id, changes, row): inline row editing.
 - actions: `{ edit, remove, custom, menu }` when not using an `actions` column.
+- actions.remove.url goes to fetch verbatim — nothing is encoded, so wrap row
+  values yourself: `url: r => '/api/users/' + encodeURIComponent(r.id)`.
+  destroy() also closes the confirmation dialog if one is open.
+- actions.remove.confirm: `{ title, className, overlayClassName, bodyClassName,
+  footClassName, cancelClassName, confirmClassName }` — the look of the delete
+  dialog. The classes are ADDED to the built-in `.vt-modal*` ones. The dialog
+  hangs off <body>, so the tokens and typography the table resolves to are
+  copied onto `.vt-modal-overlay` inline when it opens — it matches the table,
+  not the page. With both `options.actions` and an actions column, the former
+  wins and the column's `remove` is not read.
 - accordion: `{ render(row) }` or `{ columns: [...] }` — master/detail rows.
 - export: `true` or `{ formats, filename, adapters: { csv, xlsx, pdf } }`.
 - printable, exportName, emptyText, label, labelledby, labels (i18n).
@@ -80,7 +90,7 @@ Types and their own props:
 - image — src (string or row => url)
 - download — filename, text; saves the cell value as a file
 - html — render(value, row) → raw markup (the ONLY unescaped path)
-- actions — edit, remove, custom[], menu (dropdown by default)
+- actions — edit, remove (remove.confirm restyles its dialog), custom[], menu
 
 Everything except `html` (and an accordion `render()`) is HTML-escaped.
 
